@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Кабинет</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Общее расписание кабинета">
+<meta name="theme-color" content="#FFDC58" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121210" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Кабинет">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>
+  /* ================================================================
+   *  ЕДИНСТВЕННОЕ, ЧТО НУЖНО ПОМЕНЯТЬ:
+   *  вставьте между кавычками ссылку на веб‑приложение Apps Script,
+   *  она заканчивается на /exec
+   * ================================================================ */
+  const APP_URL = 'ВСТАВЬТЕ_СЮДА_ССЫЛКУ_НА_ПРИЛОЖЕНИЕ_/exec';
+</script>
+<style>
+  :root{--bg:#F6F1E6;--fg:#0B0B0B;--card:#FFFFFF;--line:#0B0B0B;--main:#FFDC58;--muted:#5A564D;--strip:#FFFFFF}
+  @media (prefers-color-scheme: dark){:root{--bg:#121210;--fg:#F2EDE1;--card:#1E1D1A;--line:#E9E3D5;--muted:#A9A397;--strip:#1E1D1A}}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;overflow:hidden}
+  /* приложение на весь экран; снизу полоса под «домашний индикатор» iPhone */
+  #app{position:fixed;left:0;top:env(safe-area-inset-top,0px);width:100%;height:calc(100vh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));border:0;display:block;background:var(--bg);opacity:0;transition:opacity .25s}
+  #app.ready{opacity:1}
+  #strip{position:fixed;left:0;right:0;bottom:0;height:env(safe-area-inset-bottom,0);background:var(--strip)}
+  #splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:5;background:var(--bg);transition:opacity .25s}
+  #splash.hide{opacity:0;pointer-events:none}
+  #splash img{width:96px;height:96px;border-radius:22px;border:3px solid var(--line);box-shadow:5px 5px 0 var(--line)}
+  #splash > b{font-size:20px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+  #splash .bar{width:140px;height:6px;border:2px solid var(--line);border-radius:9px;overflow:hidden;position:relative}
+  #splash .bar::after{content:"";position:absolute;top:0;bottom:0;width:40%;background:var(--main);animation:go 1s linear infinite}
+  @keyframes go{from{left:-40%}to{left:100%}}
+  #splash .msg{max-width:320px;text-align:center;font-size:14px;color:var(--muted);line-height:1.4;padding:0 20px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--line);border-radius:6px;background:var(--main);color:#0B0B0B;box-shadow:3px 3px 0 var(--line);padding:10px 16px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit}
+  .btn.ghost{background:var(--card);color:var(--fg)}
+  /* подсказки установки */
+  .sheet{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0));z-index:10;background:var(--card);color:var(--fg);border:3px solid var(--line);border-radius:12px;box-shadow:6px 6px 0 var(--line);padding:16px;display:none;animation:up .25s ease;max-width:460px;margin:0 auto}
+  .sheet.show{display:block}
+  @keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+  .sheet h3{margin:0 0 10px;font-size:17px;display:flex;align-items:center;gap:10px}
+  .sheet h3 img{width:32px;height:32px;border-radius:8px;border:2px solid var(--line)}
+  .sheet ol{margin:0 0 14px;padding-left:22px;font-size:15px;line-height:1.55}
+  .sheet .ico{display:inline-flex;vertical-align:-5px;width:24px;height:24px;border:2px solid var(--line);border-radius:6px;align-items:center;justify-content:center;background:var(--bg)}
+  .sheet .row{display:flex;gap:10px;justify-content:flex-end}
+  .sheet .arrow{position:absolute;left:50%;bottom:-16px;transform:translateX(-50%);font-size:22px;line-height:1}
+</style>
+</head>
+<body>
+<div id="splash">
+  <img src="apple-touch-icon.png" alt="">
+  <b>Кабинет</b>
+  <div class="bar" id="bar"></div>
+  <div class="msg" id="msg"></div>
+</div>
+<iframe id="app" title="Кабинет" allow="clipboard-write" referrerpolicy="no-referrer-when-downgrade"></iframe>
+<div id="strip"></div>
+
+<!-- iPhone / iPad: своя подсказка, т.к. Safari не предлагает установку сам -->
+<div class="sheet" id="ios">
+  <h3><img src="apple-touch-icon.png" alt="">Установите «Кабинет» на экран</h3>
+  <ol>
+    <li>Нажмите <span class="ico" aria-label="Поделиться"><svg width="14" height="16" viewBox="0 0 14 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1v11M3 5l4-4 4 4"/><path d="M1 9v7h12V9"/></svg></span> «Поделиться» — внизу экрана в Safari.</li>
+    <li>Пролистайте и выберите <b>«На экран «Домой»»</b>.</li>
+    <li>Нажмите <b>«Добавить»</b> — иконка появится на экране, приложение будет открываться без панели браузера.</li>
+  </ol>
+  <div class="row"><button class="btn ghost" id="iosLater">Позже</button><button class="btn" id="iosOk">Понятно</button></div>
+</div>
+
+<!-- Android / компьютер: кнопка установки -->
+<div class="sheet" id="inst">
+  <h3><img src="apple-touch-icon.png" alt="">Установить «Кабинет» как приложение?</h3>
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.45">Иконка на рабочем столе, запуск на весь экран без адресной строки.</p>
+  <div class="row"><button class="btn ghost" id="instNo">Не сейчас</button><button class="btn" id="instGo">Установить</button></div>
+</div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const ls = {
+    get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} },
+  };
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+  /* ---------- запуск приложения ---------- */
+  const frame = $('app');
+  if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(APP_URL)) {
+    $('bar').style.display = 'none';
+    $('msg').innerHTML = 'Оболочка ещё не настроена: откройте <b>index.html</b> и вставьте ссылку на веб‑приложение Apps Script (она заканчивается на <b>/exec</b>).';
+    return;
+  }
+  frame.addEventListener('load', () => {
+    frame.classList.add('ready');
+    $('splash').classList.add('hide');
+    setTimeout(() => { $('splash').style.display = 'none'; }, 300);
+    setTimeout(showInstallHints, 2500);
+  });
+  frame.src = APP_URL;
+  setTimeout(() => {
+    if (!frame.classList.contains('ready')) $('msg').textContent = navigator.onLine ? 'Загружаем расписание…' : 'Нет подключения к интернету. Приложение откроется, когда связь появится.';
+  }, 6000);
+  window.addEventListener('online', () => { if (!frame.classList.contains('ready')) location.reload(); });
+
+  /* ---------- «запомнить меня» внутри установленного приложения ----------
+   * Браузеры (особенно Safari на iPhone) могут стирать данные встроенного окна.
+   * Приложение передаёт сюда свой токен входа и забирает его при следующем запуске.
+   * Принимаем сообщения только от песочницы Apps Script. */
+  const TRUSTED = /^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/;
+  window.addEventListener('message', e => {
+    if (!TRUSTED.test(e.origin)) return;
+    const d = e.data || {};
+    if (d.type === 'cab-ready') {
+      const t = ls.get('kabinet.token');
+      if (t && e.source) e.source.postMessage({ type: 'cab-restore', token: t }, e.origin);
+    } else if (d.type === 'cab-token') {
+      ls.set('kabinet.token', d.token || null);
+    }
+  });
+
+  /* ---------- подсказки установки ---------- */
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let deferred = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; });
+  window.addEventListener('appinstalled', () => { $('inst').classList.remove('show'); ls.set('kabinet.installHint', 'done'); });
+
+  function showInstallHints() {
+    if (standalone) return;
+    if (isIOS) {
+      const v = ls.get('kabinet.iosHint');
+      if (v === 'done' || (v && Date.now() - Number(v) < 3 * 864e5)) return;
+      $('ios').classList.add('show');
+    } else if (deferred) {
+      const v = ls.get('kabinet.installHint');
+      if (v === 'done' || (v && Date.now() - Number(v) < 14 * 864e5)) return;
+      $('inst').classList.add('show');
+    }
+  }
+  $('iosOk').onclick = () => { ls.set('kabinet.iosHint', 'done'); $('ios').classList.remove('show'); };
+  $('iosLater').onclick = () => { ls.set('kabinet.iosHint', String(Date.now())); $('ios').classList.remove('show'); };
+  $('instNo').onclick = () => { ls.set('kabinet.installHint', String(Date.now())); $('inst').classList.remove('show'); };
+  $('instGo').onclick = async () => {
+    $('inst').classList.remove('show');
+    if (!deferred) return;
+    deferred.prompt();
+    const r = await deferred.userChoice.catch(() => null);
+    ls.set('kabinet.installHint', r && r.outcome === 'accepted' ? 'done' : String(Date.now()));
+    deferred = null;
+  };
+
+  /* ---------- офлайн‑кэш оболочки ---------- */
+  if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+})();
+</script>
+</body>
+</html>
