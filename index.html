@@ -104,7 +104,9 @@
     setTimeout(() => { $('splash').style.display = 'none'; }, 300);
     setTimeout(showInstallHints, 2500);
   });
-  frame.src = APP_URL;
+  // ссылка из письма «на этот день» (?date=ГГГГ-ММ-ДД) передаётся в приложение
+  const qd = new URLSearchParams(location.search).get('date');
+  frame.src = APP_URL + (qd && /^\d{4}-\d{2}-\d{2}$/.test(qd) ? (APP_URL.indexOf('?') >= 0 ? '&' : '?') + 'date=' + qd : '');
   setTimeout(() => {
     if (!frame.classList.contains('ready')) $('msg').textContent = navigator.onLine ? 'Загружаем расписание…' : 'Нет подключения к интернету. Приложение откроется, когда связь появится.';
   }, 6000);
